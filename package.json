@@ -1,0 +1,31 @@
+{
+  "name": "jade2script",
+  "version": "1.0.0",
+  "description": "A jade to script compiler",
+  "main": "src/main.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "jade-parser": "^0.0.2",
+    "jade-lexer": "^0.0.3",
+    "through2": "^2.0.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.0",
+    "gulp-rename": "^1.2.2"
+  },
+  "scripts": {
+    "test": "gulp test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhengzk/jade2script"
+  },
+  "keywords": [
+    "jade",
+    "script"
+  ],
+  "author": "zhengzk",
+  "license": "UNLICENSED"
+}

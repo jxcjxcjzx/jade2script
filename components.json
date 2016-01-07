@@ -1,0 +1,22 @@
+/**
+ * Created by zhengzk on 2016/1/7.
+ * 组件转换配置
+ */
+{
+  "prefix":"vvp.component",
+  "translate":{
+    "factory":"vvp.CoreObject.extend",
+    "create":"verge.create",
+    "routes":"verge.routes"
+  },
+  "scripts":{
+    "base":"src/scripts/js/components/"
+  },
+  "templates":{
+    "prefix":"vvp.view",
+    "base":"test/templates/jade/"
+  },
+  "styles":{
+    "base":"src/stylesheets/sass/components/"
+  }
+}
