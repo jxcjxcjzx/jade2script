@@ -20,12 +20,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zhengzk/jade2script"
+    "url": "git+https://github.com/zhengzk/jade2script.git"
   },
   "keywords": [
     "jade",
     "script"
   ],
   "author": "zhengzk",
-  "license": "UNLICENSED"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zhengzk/jade2script/issues"
+  },
+  "homepage": "https://github.com/zhengzk/jade2script#readme"
 }
