@@ -3,6 +3,14 @@ var lex = require("jade-lexer");
 var Block = require("./block.js");
 var tags = "a abbr address area article aside audio b base bdi bdo big blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hr html i iframe img input ins kbd keygen label legend li link main map mark menu menuitem meta meter nav noscript object ol optgroup option output p param pre progress q rp rt ruby s samp script section select small source span strong style sub summary sup table tbody td textarea tfoot th thead time title tr track u ul var video wbr circle defs ellipse g line linearGradient mask path pattern polygon polyline radialGradient rect stop svg text tspan".split(" ");
 
+var fs = require("fs");
+function read(path) {
+    return fs.readFileSync(__dirname + path, 'utf8');
+}
+
+function write(path, body) {
+    return fs.writeFileSync(__dirname + '/test/' + path, body);
+}
 function Compilation(doc,path){
     this.path = path;
     this.tree = parse(lex(doc)).nodes;
@@ -39,19 +47,11 @@ Compilation.prototype.compile = function(){
 
 
     this.block.writeBlock(this.extendBlock1);
-
-
-    //this.block.writeLine("var React = require(\"react\");");
-    //this.block.writeLine("var jade2react = require(\"jade2react\");");
-    this.block.writeLine("");
-    //this.block.writeLine("var Component = module.exports = function Component(){",1);
-
-
     //console.log(this.extendBlock1);
 
-    //this.block.writeLine("this.state = this.getInitialState?this.getInitialState():{};",-1);
-    //this.block.writeLine("}");
+    this.block.writeLine("");
     this.block.writeBlock(this.extendBlock2);
+    //console.log(this.extendBlock2);
     //this.block.writeLine("Component.prototype._render = function(__add){",1);
     //this.renderNodes(this.tree,true);
     this.renderNodes(this.tree);
@@ -381,11 +381,19 @@ Compilation.prototype.renderMixinBlock = function(node){
     this.block.writeLine("block.forEach(__add)")
 }
 
+var components = [];
 Compilation.prototype.renderExtends = function(node){
-    console.log('Extends:',node);
+    console.log('Extends:',node,'cwd:',process.cwd(),'path:',this.path);
+    var relativePath = this.path.replace.(process.cwd(),'');
+    var relative = relativePath.replace(/[-a-zA-Z0-9]+\.[-a-zA-Z0-9]+/,'');
+    var file = relative + node.path +".jade";
+    console.log(file);
+    var aa = new Compilation.compile(fs.readFileSync(file)+"",file);
+    /*
     var baseComponent = (node?("require(\""+node.path+"\")"):"React.Component");
     this.extendBlock1.writeLine(baseComponent+".call(this);");
     this.extendBlock2.writeLine("Component.prototype = Object.create("+baseComponent+".prototype);");
+    */
 }
 
 Compilation.prototype.renderNamedBlock = function(node,varName,parent){
