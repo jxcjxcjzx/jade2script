@@ -1,28 +1,29 @@
 var Compilation = require("./compilation.js");
 var fs = require("fs");
-var through = require("through2");
+//var through = require("through2");
 //var client = require("./client.js");
 
-exports = module.exports = function(file){
-    if(!/.jade$/.test(file)) return through();
+//exports = module.exports = function(file){
+//    if(!/.jade$/.test(file)) return through();
+//
+//    var data = [];
+//    var stream = through(function(d){
+//        data.push(d+"");
+//    },function(){
+//        stream.queue(module.exports.compile(data.join(""),file));
+//        stream.queue(null);
+//    });
+//
+//    return stream;
+//}
 
-    var data = [];
-    var stream = through(function(d){
-        data.push(d+"");
-    },function(){
-        stream.queue(module.exports.compile(data.join(""),file));
-        stream.queue(null);
-    });
-
-    return stream;
+exports.compile = function(str,options){
+    return new Compilation(str,options).compile();
 }
 
-exports.compile = function(str,file){
-    return new Compilation(str,file).compile();
-}
-
-exports.compileFile = function(file){
-    return module.exports.compile(fs.readFileSync(file)+"",file);
+exports.compileFile = function(file,options){
+    options = options || {};
+    return module.exports.compile(fs.readFileSync(file)+"",options);
 }
 
 require.extensions[".jade"] = function(m,file){

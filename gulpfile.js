@@ -13,7 +13,7 @@ var pkg = require('./package.json');
 
 gulp.task('components', function() {
     return gulp.src('test/src/templates/jade/**/*.jade')
-        .pipe(build({}))//components
+        .pipe(build({output:"test/UItest/a/"}))//components
         .pipe(rename({
             extname: '.js'
         }))
@@ -22,7 +22,7 @@ gulp.task('components', function() {
 
 gulp.task('test', function() {
     return gulp.src('test/src/templates/jade/index.jade')
-        .pipe(build({}))//components
+        .pipe(build({output:"test/UItest/"}))//components
         .pipe(rename({
             extname: '.js'
         }))

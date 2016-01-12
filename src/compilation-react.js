@@ -3,18 +3,8 @@ var lex = require("jade-lexer");
 var Block = require("./block.js");
 var tags = "a abbr address area article aside audio b base bdi bdo big blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hr html i iframe img input ins kbd keygen label legend li link main map mark menu menuitem meta meter nav noscript object ol optgroup option output p param pre progress q rp rt ruby s samp script section select small source span strong style sub summary sup table tbody td textarea tfoot th thead time title tr track u ul var video wbr circle defs ellipse g line linearGradient mask path pattern polygon polyline radialGradient rect stop svg text tspan".split(" ");
 
-var fs = require("fs");
-var through = require("through2");
-function read(path) {
-    return fs.readFileSync(__dirname + path, 'utf8');
-}
-
-function write(path, body) {
-    return fs.writeFileSync(__dirname + '/test/' + path, body);
-}
-function Compilation(doc,options){
-    console.log(arguments);
-    this.options = options || {};
+function Compilation(doc,path){
+    this.path = path;
     this.tree = parse(lex(doc)).nodes;
     this.extendBlock1 = new Block();
     this.extendBlock2 = new Block();
@@ -33,78 +23,52 @@ Compilation.prototype.compile = function(){
     this.deblock(this.tree);
     this.tree.forEach(function(node){
         if(node.type == "Tag" && node.name == "script") node.name = "main";
-    });
-    this.block.writeLine("/**View Component**/");
-    this.block.writeLine("vvp.ui.Component = vvp.CoreObject.extend({",1);
-    this.block.writeLine("init:function(data,options){",1);
-    this.block.writeLine("this.data = data || {};//The Component data");
-    this.block.writeLine("this.options = options || {};//The Component props");
-    this.block.writeLine("this.eles = [];");
-    this.block.writeLine("this.fragment = this._createView();");
-    this.block.indent(-1);
-    this.block.writeLine("},");
-    this.block.writeLine("/**createView**/");
-    this.block.writeLine("_createView:function(){",1);
-    this.block.writeLine("var frag = document.createDocumentFragment();");
+    })
 
-
-    this.block.writeBlock(this.extendBlock1);
-    //console.log(this.extendBlock1);
-
+    this.block.writeLine("var React = require(\"react\");");
+    this.block.writeLine("var jade2react = require(\"jade2react\");");
     this.block.writeLine("");
-    this.block.writeBlock(this.extendBlock2);
-    //console.log(this.extendBlock2);
-    //this.block.writeLine("Component.prototype._render = function(__add){",1);
-    //this.renderNodes(this.tree,true);
-    this.renderNodes(this.tree);
-
-    //end:_createView
-    this.block.writeLine("return frag;");
-    this.block.indent(-1);
+    this.block.writeLine("var Component = module.exports = function Component(){",1);
+    this.block.writeBlock(this.extendBlock1);
+    this.block.writeLine("this.state = this.getInitialState?this.getInitialState():{};",-1);
     this.block.writeLine("}");
-
+    this.block.writeBlock(this.extendBlock2);
+    this.block.writeLine("Component.prototype._render = function(__add){",1);
+    this.renderNodes(this.tree,true);
     if(this.extendBlock1.out.length){
         this.block.writeLine("Component.prototype.__proto__._render.call(this,__add);");
     }
-    //this.block.indent(-1);
-    //this.block.writeLine("}");
-    //this.block.writeLine("Component.prototype.render = function(){",1);
-    //this.block.writeLine("return jade2react.render(this,this._render)[0];",-1);
-    //this.block.writeLine("}");
-    //this.block.writeLine("");
-
-    console.log('blocklist:',this.blocklist);
+    this.block.indent(-1);
+    this.block.writeLine("}");
+    this.block.writeLine("Component.prototype.render = function(){",1);
+    this.block.writeLine("return jade2react.render(this,this._render)[0];",-1);
+    this.block.writeLine("}");
+    this.block.writeLine("");
     for(var block in this.blocklist){
         var b = this.blocklist[block];
-        this.block.writeLine(","+block+" : function(__add){",1);
-        //this.block.writeLine("Component.prototype."+block+" = function(__add){",1);
+        this.block.writeLine("Component.prototype."+block+" = function(__add){",1);
         if(b.prepend){
-            this.renderNodes(b.prepend.nodes,block + "_pre_");
+            this.renderNodes(b.prepend.nodes);
         }
         if(b.replace){
-            this.renderNodes(b.replace.nodes,block + "_rep_");
+            this.renderNodes(b.replace.nodes);
         }else{
-            //this.block.writeLine("Component.prototype.__proto__."+block+".call(this,__add);");
-            this.block.writeLine("this._super(__add);");
+            this.block.writeLine("Component.prototype.__proto__."+block+".call(this,__add);");
         }
         if(b.append){
-            this.renderNodes(b.append.nodes,block + "_");
+            this.renderNodes(b.append.nodes);
         }
         this.block.indent(-1);
         this.block.writeLine("}");
     }
-    this.block.writeLine("");
+    this.block.writeLine("")
     this.block.writeBlock(this.mixins);
     this.block.writeLine("");
     this.block.writeBlock(this.script);
 
-    //if(!this.extendBlock1.out.length){
-    //    this.renderExtends()
-    //}
-
-    //end:vvp.CoreObject.extend
-    this.block.indent(-1);
-    this.block.writeLine("});");
+    if(!this.extendBlock1.out.length){
+        this.renderExtends()
+    }
 
     var code = this.block.build();
     //console.log(code);
@@ -119,9 +83,7 @@ Compilation.prototype.deblock = function(nodes){
     }
 }
 
-Compilation.prototype.renderNode = function(node,varName,parent){ //Variable
-    var _append_flag = false;
-    //console.log(arguments);
+Compilation.prototype.renderNode = function(node){
     switch(node.type){
         case "Text":
         case "Code":
@@ -135,60 +97,38 @@ Compilation.prototype.renderNode = function(node,varName,parent){ //Variable
         case "Mixin":
         case "MixinBlock":
         case "Extends":
-        case "Include":
         case "NamedBlock":
-            _append_flag = this["render" + node.type](node,varName,parent);
+            this["render"+node.type](node);
             break;
     }
-    if(!_append_flag){
-        this.block.writeLine( parent ? (parent + ".append("+ varName +");"):"frag.appendChild("+ varName +");");
-    }
 }
 
-Compilation.prototype.renderNodes = function(nodes,prefix){
+Compilation.prototype.renderNodes = function(nodes){
     for(var i = 0; i < nodes.length; i++){
-        var _prefix = (prefix || 'fc') + "_" + i;
-        this.renderNode(nodes[i],_prefix,prefix);
+        this.renderNode(nodes[i]);
     }
 }
-//文本
-Compilation.prototype.renderText = function(node,varName,parent){
-    //console.log('Text:',node);
-    if(!node.val) return;
-    var val = node.val;
-    var variables = val.match(/!{\w{1,}}/g);
-    if(variables){
-        for(var k in variables){
-            var _var = variables[k];
-            val.replace(_var,"\'+"+_var.match(/\w{1,}/)[0] +"+'");
-        }
-    }
 
-    //console.log(node);
-    this.block.writeLine( parent  +".html(\'"+node.val+"\');");
-    return true;
+Compilation.prototype.renderText = function(node){
+    if(!node.val) return;
+    this.block.writeLine("__add(\""+node.val+"\");");
 }
 
-Compilation.prototype.renderCode = function(node,varName,parent){
-    //console.log('Code:',node);
+Compilation.prototype.renderCode = function(node){
     if(!node.val) return;
-    //console.log(node);
     if(node.block){
         this.block.writeLine(node.val+"{",1);
         this.renderNodes(node.block.nodes);
         this.block.indent(-1);
         this.block.writeLine("}");
     }else if(node.buffer){
-        this.block.writeLine( parent  +".html(\'"+node.val+"\');");
-        //this.block.writeLine("__add("+node.val+");");
+        this.block.writeLine("__add("+node.val+");");
     }else{
         this.block.writeLine(node.val);
-        return true;//非DOM结点
     }
 }
 
-Compilation.prototype.renderTag = function(node,varName,parent){
-    //console.log('Tag:',node);
+Compilation.prototype.renderTag = function(node){
     if(node.name=="main"){
         for(var i = 0; i < node.nodes.length; i++){
             switch(node.nodes[i].type){
@@ -207,16 +147,7 @@ Compilation.prototype.renderTag = function(node,varName,parent){
         this.block.writeLine("}");
     }else{
         var isDOM = tags.indexOf(node.name)>=0;
-        var isComponent = false;
-        //this.block.write("__add(React.createFactory("+(isDOM?"'":"")+node.name+(isDOM?"'":"")+"),");
-
-        var _varName = varName || "root";
-        if(isDOM){//Dom节点
-            this.block.write("var  " + _varName + " = verge.create(\'"+node.name + "\',");//verge.create('div',
-        }else{//Component
-            this.block.write("var  " + _varName + " = new " + node.name + "(");//new Aaa(
-            var isComponent = true;
-        }
+        this.block.write("__add(React.createFactory("+(isDOM?"'":"")+node.name+(isDOM?"'":"")+"),");
 
         if(node.code && node.code.val){
             node.nodes.unshift(node.code)
@@ -246,21 +177,15 @@ Compilation.prototype.renderTag = function(node,varName,parent){
             node.nodes = [];
         }
         this.renderAttributes(node);
-        this.block.writeLine(");");
-        if(isComponent){
-            this.block.writeLine(parent + ".append(" + varName +".fragment);");
-        }
 
         if(node.nodes.length){
-            //this.block.writeLine(",function(__add){",1);
-            this.renderNodes(node.nodes,_varName);
-            //this.block.indent(-1);
-            //this.block.writeLine("});");
+            this.block.writeLine(",function(__add){",1);
+            this.renderNodes(node.nodes);
+            this.block.indent(-1);
+            this.block.writeLine("});");
         }else{
-            //this.block.writeLine(");");
+            this.block.writeLine(");");
         }
-
-        return !isDOM;
     }
 }
 
@@ -288,7 +213,6 @@ Compilation.prototype.renderAttributes = function(node){
         var first = true;
         this.block.write("{");
         for(var att in attributes){
-            //this.block.write((first?"":",")+'"'+att+'":'+(att=="style"?"jade2react.mapStyle(":"")+attributes[att]+(att=="style"?")":""));
             this.block.write((first?"":",")+'"'+att+'":'+(att=="style"?"jade2react.mapStyle(":"")+attributes[att]+(att=="style"?")":""));
             first = false;
         }
@@ -297,9 +221,8 @@ Compilation.prototype.renderAttributes = function(node){
     }else{
         this.block.write("{}");
     }
-    return true;
 }
-//each
+
 Compilation.prototype.renderEach = function(node){
     this.block.writeLine("for(var "+(node.key||"__key")+" in "+node.obj+"){",1);
     if(node.val){
@@ -308,16 +231,12 @@ Compilation.prototype.renderEach = function(node){
     this.renderNodes(node.nodes);
     this.block.indent(-1);
     this.block.writeLine("}");
-    return true;
 }
 
-//注释
 Compilation.prototype.renderComment = function(node){
-    this.block.writeLine("//"+node.val);
-    return true;
+    this.block.writeLine("//"+node.val)
 }
 
-//块级注释
 Compilation.prototype.renderBlockComment = function(node){
     this.block.writeLine("/*",1);
     for(var i = 0; i < node.nodes.length; i++){
@@ -325,7 +244,6 @@ Compilation.prototype.renderBlockComment = function(node){
     }
     this.block.indent(-1);
     this.block.writeLine("*/");
-    return true;
 }
 
 Compilation.prototype.renderCase = function(node){
@@ -333,22 +251,18 @@ Compilation.prototype.renderCase = function(node){
     this.renderNodes(node.nodes);
     this.block.indent(-1);
     this.block.writeLine("}");
-    return true;
 }
 
 Compilation.prototype.renderWhen = function(node){
-    //console.log('When:',node);
     this.block.writeLine("case "+node.expr+":",1);
     if(node.nodes){
         this.renderNodes(node.nodes);
         this.block.writeLine("break;");
     }
     this.block.indent(-1);
-    return true;
 }
 
 Compilation.prototype.renderMixin = function(node){
-    console.log('Mixin:',node);
     if(node.call){
         this.block.write("this."+node.name+"(");
         if(node.nodes){
@@ -392,70 +306,21 @@ Compilation.prototype.renderMixin = function(node){
 }
 
 Compilation.prototype.renderMixinBlock = function(node){
-    console.log('MixinBlock:',node);
     this.block.writeLine("block.forEach(__add)")
 }
 
-//创建多层文件夹 同步
-function mkdirsSync(dirpath, mode) {
-    if (!fs.existsSync(dirpath)) {
-        var pathtmp;
-        dirpath.split(path.sep).forEach(function(dirname) {
-            if (pathtmp) {
-                pathtmp = path.join(pathtmp, dirname);
-            }
-            else {
-                pathtmp = dirname;
-            }
-            if (!fs.existsSync(pathtmp)) {
-                if (!fs.mkdirSync(pathtmp, mode)) {
-                    return false;
-                }
-            }
-        });
-    }
-    return true;
-}
-var components = [];
 Compilation.prototype.renderExtends = function(node){
-    console.log('Extends:',node,'cwd:',process.cwd(),'options:',this.options);
-    var relativePath = this.options.filePath.replace(process.cwd()+'\\','');
-    var relative = relativePath.replace(/[-a-zA-Z0-9]+\.[-a-zA-Z0-9]+/,'');
-    var file = relative + node.path +".jade";
-
-    var aa =  new Compilation(fs.readFileSync(file)+"",file);
-
-    //var _out = this.options.output + relative + node.path + ".js";
-    //mkdirsSync(out_path);
-    //fs.writeFileSync(__dirname + '/test__.js', aa.compile());
-    //fs.writeFileSync(_out, aa.compile());
-
-
-    //new
-    this.extendBlock2.writeLine('//var _cc = new ExtendsObject('+file+');');
-    this.extendBlock2.writeLine('"Extends:'+file+'"');
-
-    return true;
-    /*
     var baseComponent = (node?("require(\""+node.path+"\")"):"React.Component");
     this.extendBlock1.writeLine(baseComponent+".call(this);");
     this.extendBlock2.writeLine("Component.prototype = Object.create("+baseComponent+".prototype);");
-    */
 }
 
-Compilation.prototype.renderInclude = function(node,varName,parent){
-    console.log('Include:',node,'cwd:',process.cwd(),'path:',this.path);
-    return this.renderExtends(node,varName,parent);
-}
-
-Compilation.prototype.renderNamedBlock = function(node,varName,parent){
-    console.log('NamedBlock:',node);
+Compilation.prototype.renderNamedBlock = function(node){
     if(!this.blocklist[node.name]) this.blocklist[node.name] = {};
     this.blocklist[node.name][node.mode||"replace"] = node;
     if(node.mode == "replace" || node.mode === undefined){
-        this.block.writeLine("this." + node.name + "(__add);");
+        this.block.writeLine("this."+node.name+"(__add);")
     }
-    return true;
 }
 
 module.exports = Compilation;

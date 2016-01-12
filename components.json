@@ -14,9 +14,11 @@
   },
   "templates":{
     "prefix":"vvp.view",
-    "base":"test/templates/jade/"
+    "base":"test/src/templates/jade/",
+    "src":"index.jade"
   },
   "styles":{
     "base":"src/stylesheets/sass/components/"
-  }
+  },
+  "output":"test/output/" //输出路径
 }
