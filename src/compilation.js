@@ -67,11 +67,11 @@ Compilation.prototype.compile = function(){
     this.block.writeLine("this.data = data || {};//The Component data");
     this.block.writeLine("this.options = options || {};//The Component props");
     this.block.writeLine("this.eles = [];");
-    this.block.writeLine("this.fragment = this._createView();");
+    this.block.writeLine("this.fragment = this._createView(data,options);");
     this.block.indent(-1);
     this.block.writeLine("},");
     this.block.writeLine("/**createView**/");
-    this.block.writeLine("_createView:function(){",1);
+    this.block.writeLine("_createView:function(data,options){",1);
     this.block.writeLine("var frag = document.createDocumentFragment();");
 
 
@@ -134,7 +134,8 @@ Compilation.prototype.compile = function(){
     //end:vvp.CoreObject.extend
     this.block.indent(-1);
     this.block.writeLine("});");
-
+    this.block.writeLine("");
+    this.block.writeLine(this.options.prefix + "."+ _name +" = "+_translate.base + "."+ _name + ";");
     var code = this.block.build();
     //console.log(code);
     return code;
