@@ -4,20 +4,44 @@ var Block = require("./block.js");
 var tags = "a abbr address area article aside audio b base bdi bdo big blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hr html i iframe img input ins kbd keygen label legend li link main map mark menu menuitem meta meter nav noscript object ol optgroup option output p param pre progress q rp rt ruby s samp script section select small source span strong style sub summary sup table tbody td textarea tfoot th thead time title tr track u ul var video wbr circle defs ellipse g line linearGradient mask path pattern polygon polyline radialGradient rect stop svg text tspan".split(" ");
 
 var fs = require("fs");
-var through = require("through2");
-function read(path) {
-    return fs.readFileSync(__dirname + path, 'utf8');
+var path = require('path');
+
+//var through = require("through2");
+//function read(path) {
+//    return fs.readFileSync(__dirname + path, 'utf8');
+//}
+//
+//function write(path, body) {
+//    return fs.writeFileSync(__dirname + '/test/' + path, body);
+//}
+
+/**
+ * 首字母大写
+ **/
+function upperCase(str){
+    return str.replace(/(\w)/,function(v){
+        return v.toUpperCase();
+    });
 }
 
-function write(path, body) {
-    return fs.writeFileSync(__dirname + '/test/' + path, body);
+
+function getObjectName(relative){
+    //path.dirname('/foo/bar/baz/asdf/quux.txt');// => /foo/bar/baz/asdf
+    //path.basename('/foo/bar/baz/asdf/quux.html');// => quux.html
+    var nameArr = path.basename(relative,".jade").split('-');
+    var ret = '';
+    for(var i = 0, l = nameArr.length ; i < l ; i ++){
+        ret += upperCase(nameArr[i]);
+    }
+    return ret; ///\.[^\.]+/,
 }
+
 function Compilation(doc,options){
-    console.log(arguments);
+    //console.log(arguments);
     this.options = options || {};
     this.tree = parse(lex(doc)).nodes;
-    this.extendBlock1 = new Block();
-    this.extendBlock2 = new Block();
+    //this.extendBlock1 = new Block();
+    //this.extendBlock2 = new Block();
     this.main = new Block();
     this.mixins = new Block();
     this.script = new Block();
@@ -34,8 +58,11 @@ Compilation.prototype.compile = function(){
     this.tree.forEach(function(node){
         if(node.type == "Tag" && node.name == "script") node.name = "main";
     });
-    this.block.writeLine("/**View Component**/");
-    this.block.writeLine("vvp.ui.Component = vvp.CoreObject.extend({",1);
+
+    var _translate = this.options.translate;
+    var _name = getObjectName(this.options.file.relative);
+    this.block.writeLine("/**The Component:" + _name +"'s View **/");
+    this.block.writeLine(_translate.base + "."+ _name +" = "+ _translate.factory +"({",1);
     this.block.writeLine("init:function(data,options){",1);
     this.block.writeLine("this.data = data || {};//The Component data");
     this.block.writeLine("this.options = options || {};//The Component props");
@@ -48,24 +75,26 @@ Compilation.prototype.compile = function(){
     this.block.writeLine("var frag = document.createDocumentFragment();");
 
 
-    this.block.writeBlock(this.extendBlock1);
+    this.renderNodes(this.tree);
+
+    //this.block.writeBlock(this.extendBlock1);
     //console.log(this.extendBlock1);
 
-    this.block.writeLine("");
-    this.block.writeBlock(this.extendBlock2);
+    //this.block.writeLine("//block2");
+    //this.block.writeBlock(this.extendBlock2);
     //console.log(this.extendBlock2);
     //this.block.writeLine("Component.prototype._render = function(__add){",1);
     //this.renderNodes(this.tree,true);
-    this.renderNodes(this.tree);
+
 
     //end:_createView
     this.block.writeLine("return frag;");
     this.block.indent(-1);
     this.block.writeLine("}");
 
-    if(this.extendBlock1.out.length){
-        this.block.writeLine("Component.prototype.__proto__._render.call(this,__add);");
-    }
+    //if(this.extendBlock1.out.length){
+    //    this.block.writeLine("Component.prototype.__proto__._render.call(this,__add);");
+    //}
     //this.block.indent(-1);
     //this.block.writeLine("}");
     //this.block.writeLine("Component.prototype.render = function(){",1);
@@ -73,7 +102,7 @@ Compilation.prototype.compile = function(){
     //this.block.writeLine("}");
     //this.block.writeLine("");
 
-    console.log('blocklist:',this.blocklist);
+    //console.log('blocklist:',this.blocklist);
     for(var block in this.blocklist){
         var b = this.blocklist[block];
         this.block.writeLine(","+block+" : function(__add){",1);
@@ -164,7 +193,6 @@ Compilation.prototype.renderText = function(node,varName,parent){
         }
     }
 
-    //console.log(node);
     this.block.writeLine( parent  +".html(\'"+node.val+"\');");
     return true;
 }
@@ -172,7 +200,6 @@ Compilation.prototype.renderText = function(node,varName,parent){
 Compilation.prototype.renderCode = function(node,varName,parent){
     //console.log('Code:',node);
     if(!node.val) return;
-    //console.log(node);
     if(node.block){
         this.block.writeLine(node.val+"{",1);
         this.renderNodes(node.block.nodes);
@@ -183,13 +210,14 @@ Compilation.prototype.renderCode = function(node,varName,parent){
         //this.block.writeLine("__add("+node.val+");");
     }else{
         this.block.writeLine(node.val);
-        return true;//非DOM结点
     }
+    return true;
 }
 
 Compilation.prototype.renderTag = function(node,varName,parent){
     //console.log('Tag:',node);
     if(node.name=="main"){
+        //console.log('main',node.nodes);
         for(var i = 0; i < node.nodes.length; i++){
             switch(node.nodes[i].type){
                 case "Text":
@@ -202,6 +230,7 @@ Compilation.prototype.renderTag = function(node,varName,parent){
 
         }
     }else if(node.name == "children"){
+        //console.log('children',node.nodes);
         this.block.writeLine("for(var i = 0; i < this.props.children.length; i++){",1);
         this.block.writeLine("__add(this.props.children[i]);",-1);
         this.block.writeLine("}");
@@ -211,8 +240,9 @@ Compilation.prototype.renderTag = function(node,varName,parent){
         //this.block.write("__add(React.createFactory("+(isDOM?"'":"")+node.name+(isDOM?"'":"")+"),");
 
         var _varName = varName || "root";
+        var _translate = this.options.translate;
         if(isDOM){//Dom节点
-            this.block.write("var  " + _varName + " = verge.create(\'"+node.name + "\',");//verge.create('div',
+            this.block.write("var  " + _varName + " = " + _translate.utils + ".create(\'"+node.name + "\',");//verge.create('div',
         }else{//Component
             this.block.write("var  " + _varName + " = new " + node.name + "(");//new Aaa(
             var isComponent = true;
@@ -245,10 +275,14 @@ Compilation.prototype.renderTag = function(node,varName,parent){
             }
             node.nodes = [];
         }
-        this.renderAttributes(node);
+        var _key = this.renderAttributes(node);
         this.block.writeLine(");");
         if(isComponent){
             this.block.writeLine(parent + ".append(" + varName +".fragment);");
+        }
+
+        if(_key){
+            this.block.writeLine("this[" + _key +"] = " + varName +";");
         }
 
         if(node.nodes.length){
@@ -268,13 +302,16 @@ Compilation.prototype.renderBlock = function(node){
     this.renderNodes(node.nodes);
 }
 
-Compilation.prototype.renderAttributes = function(node){
+Compilation.prototype.renderAttributes = function(node,varName,parent){
+    var _key_;
     if(node.attrs){
         var attributes = {};
         for(var i = 0; i < node.attrs.length; i++){
             var att = node.attrs[i];
-            if(attributes[att.name] && att.name == "class"){
-                attributes[att.name] += " + \" \" + "+att.val;
+            if(attributes[att.name] && att.name == "class") {
+                attributes[att.name] += " + \" \" + " + att.val;
+            }else if(att.name == "id"){
+                _key_ = att.val;
             }else{
                 attributes[att.name] = att.val;
             }
@@ -284,12 +321,13 @@ Compilation.prototype.renderAttributes = function(node){
             attributes.className = attributes.class;
             delete attributes.class;
         }
-        if(node.attributeBlocks.length) this.block.write("jade2react.mixinAttributes(");
+        var _translate  = this.options.translate;
+        if(node.attributeBlocks.length) this.block.write(_translate.utils + ".mixinAttributes(");
         var first = true;
         this.block.write("{");
         for(var att in attributes){
             //this.block.write((first?"":",")+'"'+att+'":'+(att=="style"?"jade2react.mapStyle(":"")+attributes[att]+(att=="style"?")":""));
-            this.block.write((first?"":",")+'"'+att+'":'+(att=="style"?"jade2react.mapStyle(":"")+attributes[att]+(att=="style"?")":""));
+            this.block.write((first?"":",")+'"'+att+'":'+(att=="style"?_translate.utils +".mapStyle(":"")+attributes[att]+(att=="style"?")":""));
             first = false;
         }
         this.block.write("}");
@@ -297,7 +335,7 @@ Compilation.prototype.renderAttributes = function(node){
     }else{
         this.block.write("{}");
     }
-    return true;
+    return _key_;
 }
 //each
 Compilation.prototype.renderEach = function(node){
@@ -347,12 +385,14 @@ Compilation.prototype.renderWhen = function(node){
     return true;
 }
 
-Compilation.prototype.renderMixin = function(node){
+Compilation.prototype.renderMixin = function(node){//当前转换不可用
     console.log('Mixin:',node);
+    var _translate = this.options.translate;
     if(node.call){
         this.block.write("this."+node.name+"(");
         if(node.nodes){
-            this.block.writeLine("jade2react.render(this,function(__add){",1);
+            this.block.writeLine(_translate.utils +".render(this,function(__add){",1);
+            //this.block.writeLine("jade2react.render(this,function(__add){",1);
             this.renderNodes(node.nodes);
             this.block.indent(-1);
             this.block.write("}),");
@@ -381,7 +421,7 @@ Compilation.prototype.renderMixin = function(node){
         if(argparts.length > 1){
             this.block.writeLine("var "+argparts[1].trim()+" = Array.prototype.slice.call(arguments,"+argparts[0].split(",").length+");");
         }
-        this.block.writeLine("return jade2react.render(this,function(__add){",1);
+        this.block.writeLine("return "+_translate.utils +".render(this,function(__add){",1);
         this.renderNodes(node.nodes)
         this.block.indent(-1);
         this.block.writeLine("});");
@@ -393,7 +433,7 @@ Compilation.prototype.renderMixin = function(node){
 
 Compilation.prototype.renderMixinBlock = function(node){
     console.log('MixinBlock:',node);
-    this.block.writeLine("block.forEach(__add)")
+    this.block.writeLine("block.forEach(__add)");
 }
 
 //创建多层文件夹 同步
@@ -417,23 +457,27 @@ function mkdirsSync(dirpath, mode) {
     return true;
 }
 var components = [];
-Compilation.prototype.renderExtends = function(node){
-    console.log('Extends:',node,'cwd:',process.cwd(),'options:',this.options);
-    var relativePath = this.options.filePath.replace(process.cwd()+'\\','');
-    var relative = relativePath.replace(/[-a-zA-Z0-9]+\.[-a-zA-Z0-9]+/,'');
-    var file = relative + node.path +".jade";
+Compilation.prototype.renderExtends = function(node,varName,parent){
+    //console.log('Extends:',node);
 
-    var aa =  new Compilation(fs.readFileSync(file)+"",file);
+    //var relativePath = this.options.filePath.replace(process.cwd()+'\\','');
+    //var relative = relativePath.replace(/[-a-zA-Z0-9]+\.[-a-zA-Z0-9]+/,'');
+    //var file = relative + node.path +".jade";
+
+    //var aa =  new Compilation(fs.readFileSync(file)+"",file);
 
     //var _out = this.options.output + relative + node.path + ".js";
     //mkdirsSync(out_path);
     //fs.writeFileSync(__dirname + '/test__.js', aa.compile());
     //fs.writeFileSync(_out, aa.compile());
-
+    var opt = this.options;
+    var _name = getObjectName(node.path);
 
     //new
-    this.extendBlock2.writeLine('//var _cc = new ExtendsObject('+file+');');
-    this.extendBlock2.writeLine('"Extends:'+file+'"');
+    this.block.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
+    this.block.writeLine( parent + '.append('+varName+'.fragment);');
+    //this.extendBlock2.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
+    //this.extendBlock2.writeLine( parent + '.append('+varName+'.fragment);');
 
     return true;
     /*
@@ -444,12 +488,12 @@ Compilation.prototype.renderExtends = function(node){
 }
 
 Compilation.prototype.renderInclude = function(node,varName,parent){
-    console.log('Include:',node,'cwd:',process.cwd(),'path:',this.path);
+    //console.log('Include:',node,'cwd:',process.cwd(),'path:',this.path);
     return this.renderExtends(node,varName,parent);
 }
 
 Compilation.prototype.renderNamedBlock = function(node,varName,parent){
-    console.log('NamedBlock:',node);
+    //console.log('NamedBlock:',node);
     if(!this.blocklist[node.name]) this.blocklist[node.name] = {};
     this.blocklist[node.name][node.mode||"replace"] = node;
     if(node.mode == "replace" || node.mode === undefined){

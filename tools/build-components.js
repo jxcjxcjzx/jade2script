@@ -8,10 +8,8 @@ var fs = require('fs'),
 var utils = require("./utils");
 
 module.exports = function(options){
-    console.log('options:',options);
+    //console.log('options:',options);
     return utils.modify(function(data,file){
-        console.log(file.path);
-
         //rename
         //var _path = file.path.replace('.jade','.js');
         //fs.rename(file.path,_path,function(err){
@@ -20,8 +18,15 @@ module.exports = function(options){
         //    }
         //});
 
-        return jade2script.compile(data,utils.merge(options,{filePath:file.path}));
+        //console.log('file:',file.relative);
 
-        return "";
+        return jade2script.compile(data,
+            utils.merge(options,{
+                file:{
+                    relative:file.relative,
+                    path:file.path
+                }
+            })
+        );
     });
 }

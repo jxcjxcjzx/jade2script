@@ -8,12 +8,12 @@ var gulp = require('gulp'),
 
     build = require("./tools/build-components");
 
-var pkg = require('./package.json');
-    //components = require('./components.json');
+var pkg = require('./package.json'),
+    components = require('./components.json');
 
 gulp.task('components', function() {
     return gulp.src('test/src/templates/jade/**/*.jade')
-        .pipe(build({output:"test/UItest/a/"}))//components
+        .pipe(build(components))//components
         .pipe(rename({
             extname: '.js'
         }))
@@ -21,8 +21,8 @@ gulp.task('components', function() {
 });
 
 gulp.task('test', function() {
-    return gulp.src('test/src/templates/jade/index.jade')
-        .pipe(build({output:"test/UItest/"}))//components
+    return gulp.src('test/src/templates/jade/verge/verge.jade')
+        .pipe(build(components))//components
         .pipe(rename({
             extname: '.js'
         }))
