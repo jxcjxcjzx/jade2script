@@ -1,19 +1,22 @@
 {
   "name": "jade2script",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A jade to script compiler",
-  "main": "src/main.js",
+  "main": "index.js",
   "directories": {
-    "test": "test"
+    "test": "gulp"
   },
   "dependencies": {
     "jade-parser": "^0.0.2",
-    "jade-lexer": "^0.0.3",
-    "through2": "^2.0.0"
+    "jade-lexer": "^0.0.3"
   },
   "devDependencies": {
     "gulp": "^3.9.0",
-    "gulp-rename": "^1.2.2"
+    "gulp-concat": "^2.6.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-uglify": "^1.5.1",
+    "streamqueue": "^1.1.1",
+    "through2": "^2.0.0"
   },
   "scripts": {
     "test": "gulp test"

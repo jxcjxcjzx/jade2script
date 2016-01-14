@@ -1,40 +1,10 @@
-var parse = require("jade-parser");
-var lex = require("jade-lexer");
-var Block = require("./block.js");
+var parse = require("jade-parser"),
+    lex = require("jade-lexer"),
+
+    utils = require('./utils');
+    Block = require("./block");
+
 var tags = "a abbr address area article aside audio b base bdi bdo big blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hr html i iframe img input ins kbd keygen label legend li link main map mark menu menuitem meta meter nav noscript object ol optgroup option output p param pre progress q rp rt ruby s samp script section select small source span strong style sub summary sup table tbody td textarea tfoot th thead time title tr track u ul var video wbr circle defs ellipse g line linearGradient mask path pattern polygon polyline radialGradient rect stop svg text tspan".split(" ");
-
-var fs = require("fs");
-var path = require('path');
-
-//var through = require("through2");
-//function read(path) {
-//    return fs.readFileSync(__dirname + path, 'utf8');
-//}
-//
-//function write(path, body) {
-//    return fs.writeFileSync(__dirname + '/test/' + path, body);
-//}
-
-/**
- * 首字母大写
- **/
-function upperCase(str){
-    return str.replace(/(\w)/,function(v){
-        return v.toUpperCase();
-    });
-}
-
-
-function getObjectName(relative){
-    //path.dirname('/foo/bar/baz/asdf/quux.txt');// => /foo/bar/baz/asdf
-    //path.basename('/foo/bar/baz/asdf/quux.html');// => quux.html
-    var nameArr = path.basename(relative,".jade").split('-');
-    var ret = '';
-    for(var i = 0, l = nameArr.length ; i < l ; i ++){
-        ret += upperCase(nameArr[i]);
-    }
-    return ret; ///\.[^\.]+/,
-}
 
 function Compilation(doc,options){
     //console.log(arguments);
@@ -59,32 +29,10 @@ Compilation.prototype.compile = function(){
         if(node.type == "Tag" && node.name == "script") node.name = "main";
     });
 
-    var _translate = this.options.translate;
-    var _name = getObjectName(this.options.file.relative);
-    this.block.writeLine("/**The Component:" + _name +"'s View **/");
-    this.block.writeLine(_translate.base + "."+ _name +" = "+ _translate.factory +"({",1);
-    this.block.writeLine("init:function(data,options){",1);
-    this.block.writeLine("this.data = data || {};//The Component data");
-    this.block.writeLine("this.options = options || {};//The Component props");
-    this.block.writeLine("this.eles = [];");
-    this.block.writeLine("this.fragment = this._createView(data,options);");
-    this.block.indent(-1);
-    this.block.writeLine("},");
-    this.block.writeLine("/**createView**/");
-    this.block.writeLine("_createView:function(data,options){",1);
+    this.block.writeLine("function(options){",1);
     this.block.writeLine("var frag = document.createDocumentFragment();");
-
-
     this.renderNodes(this.tree);
 
-    //this.block.writeBlock(this.extendBlock1);
-    //console.log(this.extendBlock1);
-
-    //this.block.writeLine("//block2");
-    //this.block.writeBlock(this.extendBlock2);
-    //console.log(this.extendBlock2);
-    //this.block.writeLine("Component.prototype._render = function(__add){",1);
-    //this.renderNodes(this.tree,true);
 
 
     //end:_createView
@@ -92,9 +40,6 @@ Compilation.prototype.compile = function(){
     this.block.indent(-1);
     this.block.writeLine("}");
 
-    //if(this.extendBlock1.out.length){
-    //    this.block.writeLine("Component.prototype.__proto__._render.call(this,__add);");
-    //}
     //this.block.indent(-1);
     //this.block.writeLine("}");
     //this.block.writeLine("Component.prototype.render = function(){",1);
@@ -122,9 +67,9 @@ Compilation.prototype.compile = function(){
         this.block.indent(-1);
         this.block.writeLine("}");
     }
-    this.block.writeLine("");
+    //this.block.writeLine("");
     this.block.writeBlock(this.mixins);
-    this.block.writeLine("");
+    //this.block.writeLine("");
     this.block.writeBlock(this.script);
 
     //if(!this.extendBlock1.out.length){
@@ -132,11 +77,16 @@ Compilation.prototype.compile = function(){
     //}
 
     //end:vvp.CoreObject.extend
-    this.block.indent(-1);
-    this.block.writeLine("});");
-    this.block.writeLine("");
-    this.block.writeLine(this.options.prefix + "."+ _name +" = "+_translate.base + "."+ _name + ";");
+    //this.block.indent(-1);
+    //this.block.writeLine("}");
+    //this.block.writeLine("});");
+    //this.block.writeLine("");
     var code = this.block.build();
+    var base = this.options.utils || "base";
+    var _name = this.options.name;
+    var _translate = this.options.translate;
+    return base + '.routes("' + _name + '",true);\n'
+        + _name + " = " + (utils.isFunction(_translate) ? _translate(code,_name) : code + ";\n");
     //console.log(code);
     return code;
 }
@@ -196,7 +146,7 @@ Compilation.prototype.renderText = function(node,varName,parent){
 
     this.block.writeLine( parent  +".html(\'"+node.val+"\');");
     return true;
-}
+};
 
 Compilation.prototype.renderCode = function(node,varName,parent){
     //console.log('Code:',node);
@@ -241,9 +191,9 @@ Compilation.prototype.renderTag = function(node,varName,parent){
         //this.block.write("__add(React.createFactory("+(isDOM?"'":"")+node.name+(isDOM?"'":"")+"),");
 
         var _varName = varName || "root";
-        var _translate = this.options.translate;
+        var base = this.options.utils || "base";
         if(isDOM){//Dom节点
-            this.block.write("var  " + _varName + " = " + _translate.utils + ".create(\'"+node.name + "\',");//verge.create('div',
+            this.block.write("var  " + _varName + " = " + base + ".create(\'"+node.name + "\',");//verge.create('div',
         }else{//Component
             this.block.write("var  " + _varName + " = new " + node.name + "(");//new Aaa(
             var isComponent = true;
@@ -287,21 +237,18 @@ Compilation.prototype.renderTag = function(node,varName,parent){
         }
 
         if(node.nodes.length){
-            //this.block.writeLine(",function(__add){",1);
             this.renderNodes(node.nodes,_varName);
-            //this.block.indent(-1);
-            //this.block.writeLine("});");
         }else{
             //this.block.writeLine(");");
         }
 
         return !isDOM;
     }
-}
+};
 
 Compilation.prototype.renderBlock = function(node){
     this.renderNodes(node.nodes);
-}
+};
 
 Compilation.prototype.renderAttributes = function(node,varName,parent){
     var _key_;
@@ -322,13 +269,13 @@ Compilation.prototype.renderAttributes = function(node,varName,parent){
             attributes.className = attributes.class;
             delete attributes.class;
         }
-        var _translate  = this.options.translate;
-        if(node.attributeBlocks.length) this.block.write(_translate.utils + ".mixinAttributes(");
+        var _base  = this.options.utils;
+        if(node.attributeBlocks.length) this.block.write(_base + ".mixinAttributes(");
         var first = true;
         this.block.write("{");
         for(var att in attributes){
             //this.block.write((first?"":",")+'"'+att+'":'+(att=="style"?"jade2react.mapStyle(":"")+attributes[att]+(att=="style"?")":""));
-            this.block.write((first?"":",")+'"'+att+'":'+(att=="style"?_translate.utils +".mapStyle(":"")+attributes[att]+(att=="style"?")":""));
+            this.block.write((first?"":",")+'"'+att+'":'+(att=="style"? _base +".mapStyle(":"")+attributes[att]+(att=="style"?")":""));
             first = false;
         }
         this.block.write("}");
@@ -388,11 +335,11 @@ Compilation.prototype.renderWhen = function(node){
 
 Compilation.prototype.renderMixin = function(node){//当前转换不可用
     console.log('Mixin:',node);
-    var _translate = this.options.translate;
+    var _base = this.options.utils;
     if(node.call){
         this.block.write("this."+node.name+"(");
         if(node.nodes){
-            this.block.writeLine(_translate.utils +".render(this,function(__add){",1);
+            this.block.writeLine(_base +".render(this,function(__add){",1);
             //this.block.writeLine("jade2react.render(this,function(__add){",1);
             this.renderNodes(node.nodes);
             this.block.indent(-1);
@@ -422,7 +369,7 @@ Compilation.prototype.renderMixin = function(node){//当前转换不可用
         if(argparts.length > 1){
             this.block.writeLine("var "+argparts[1].trim()+" = Array.prototype.slice.call(arguments,"+argparts[0].split(",").length+");");
         }
-        this.block.writeLine("return "+_translate.utils +".render(this,function(__add){",1);
+        this.block.writeLine("return "+ _base +".render(this,function(__add){",1);
         this.renderNodes(node.nodes)
         this.block.indent(-1);
         this.block.writeLine("});");
@@ -437,27 +384,6 @@ Compilation.prototype.renderMixinBlock = function(node){
     this.block.writeLine("block.forEach(__add)");
 }
 
-//创建多层文件夹 同步
-function mkdirsSync(dirpath, mode) {
-    if (!fs.existsSync(dirpath)) {
-        var pathtmp;
-        dirpath.split(path.sep).forEach(function(dirname) {
-            if (pathtmp) {
-                pathtmp = path.join(pathtmp, dirname);
-            }
-            else {
-                pathtmp = dirname;
-            }
-            if (!fs.existsSync(pathtmp)) {
-                if (!fs.mkdirSync(pathtmp, mode)) {
-                    return false;
-                }
-            }
-        });
-    }
-    return true;
-}
-var components = [];
 Compilation.prototype.renderExtends = function(node,varName,parent){
     //console.log('Extends:',node);
 
@@ -471,11 +397,11 @@ Compilation.prototype.renderExtends = function(node,varName,parent){
     //mkdirsSync(out_path);
     //fs.writeFileSync(__dirname + '/test__.js', aa.compile());
     //fs.writeFileSync(_out, aa.compile());
-    var opt = this.options;
-    var _name = getObjectName(node.path);
+
+    var _name = this.options.parseName(node.path);//getObjectName(node.path);
 
     //new
-    this.block.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
+    this.block.writeLine('var ' + varName + " = new "+ _name + "();");
     this.block.writeLine( parent + '.append('+varName+'.fragment);');
     //this.extendBlock2.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
     //this.extendBlock2.writeLine( parent + '.append('+varName+'.fragment);');
