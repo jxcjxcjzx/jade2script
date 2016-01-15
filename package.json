@@ -1,14 +1,14 @@
 {
   "name": "jade2script",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A jade to script compiler",
   "main": "index.js",
   "directories": {
     "test": "gulp"
   },
   "dependencies": {
-    "jade-parser": "^0.0.2",
-    "jade-lexer": "^0.0.3"
+    "pug-lexer": "^1.0.0",
+    "pug-parser": "^1.0.0"
   },
   "devDependencies": {
     "gulp": "^3.9.0",

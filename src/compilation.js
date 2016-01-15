@@ -1,5 +1,5 @@
-var parse = require("jade-parser"),
-    lex = require("jade-lexer"),
+var parse = require("pug-parser"),
+    lex = require("pug-lexer"),
 
     utils = require('./utils');
     Block = require("./block");
@@ -36,9 +36,10 @@ Compilation.prototype.compile = function(){
 
 
     //end:_createView
+    this.block.writeLine("this.fragment = frag;");
     this.block.writeLine("return frag;");
     this.block.indent(-1);
-    this.block.writeLine("}");
+    this.block.write("}");
 
     //this.block.indent(-1);
     //this.block.writeLine("}");
@@ -50,7 +51,7 @@ Compilation.prototype.compile = function(){
     //console.log('blocklist:',this.blocklist);
     for(var block in this.blocklist){
         var b = this.blocklist[block];
-        this.block.writeLine(","+block+" : function(__add){",1);
+        this.block.writeLine("\n,"+block+" : function(__add){",1);
         //this.block.writeLine("Component.prototype."+block+" = function(__add){",1);
         if(b.prepend){
             this.renderNodes(b.prepend.nodes,block + "_pre_");
@@ -65,7 +66,7 @@ Compilation.prototype.compile = function(){
             this.renderNodes(b.append.nodes,block + "_");
         }
         this.block.indent(-1);
-        this.block.writeLine("}");
+        this.block.write("}");
     }
     //this.block.writeLine("");
     this.block.writeBlock(this.mixins);

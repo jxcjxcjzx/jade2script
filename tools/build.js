@@ -95,5 +95,5 @@ exports.translate = function(data,name){
         +"\t},\n"
         +"\t _createView:"
         + data
-        + "});\n"
+        + "\n});\n"
 };

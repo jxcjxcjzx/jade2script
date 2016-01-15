@@ -19,19 +19,19 @@ npm install jade2script
 ## Demo
 完整实例见代码 
 
-input:
-main.jade
+* input:
+** main.jade
 ```jade
 .main
     include view/hello-world
 ```
-view\hello-world.jade
+** view\hello-world.jade
 ```jade
 .main
     include view/hello-world
 ```
 
-output:
+* output:
 ```js
 //base lib code
 
@@ -51,20 +51,21 @@ view.HelloWorld = function(options){
 	var  fc_0 = base.create('span',{"className":'hello'});
 	fc_0.html('helloWorld!');
 	frag.appendChild(fc_0);
+	this.fragment = frag;
 	return frag;
 };
 ```
 
 相关构建脚本:
-[gulpfile.js](./gulpfile.js) 
+[gulpfile.js](./gulpfile.js)
 [tools/build.js](./tools/build.js) 
      
 ## 实现参照
-[jade2react](https://github.com/VanCoding/jade2react)
++ [jade2react](https://github.com/VanCoding/jade2react)
 
 ## maybe you need ? 
-[json2script](https://github.com/zhengzk/json2script) parse json to script
-[html2script](https://github.com/zhengzk/html2script) parse html to script
++ [json2script](https://github.com/zhengzk/json2script) parse json to script
++ [html2script](https://github.com/zhengzk/html2script) parse html to script
 
 License
 -------
