@@ -18,22 +18,21 @@ exports.compile = function(str,options){
     if(!options.name){
         throw new Error('Please set name!');
     }
-    var _options = {};
+    var _options = utils.merge(config,options);
     _options.name = utils.parseName(options.name);
     if(utils.isFunction(options.parseName)){
+        var _parseName = options.parseName;
         _options.parseName = function(_path){
-            return utils.parseName(options.parseName(_path));
+            return utils.parseName(_parseName(_path));
         }
     }else{
         _options.parseName = function(_path){
             var nameArr = options.name.split('.');
             var prefix = nameArr.slice(0,nameArr.length-1).join('.');
             prefix = prefix ? prefix + "." : "";
-            return utils.parseName(prefix + _path.split(path.sep).join("."));
+            return utils.parseName(prefix + _path.split("/").join("."));
         }
     }
-    _options = utils.merge(config,_options);
-    _options = utils.merge(options,_options);
     return new Compilation(str,_options).compile();
 };
 

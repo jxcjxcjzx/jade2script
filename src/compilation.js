@@ -116,7 +116,7 @@ Compilation.prototype.renderNode = function(node,varName,parent){ //Variable
         case "Mixin":
         case "MixinBlock":
         case "Extends":
-        case "Include":
+        case "RawInclude":
         case "NamedBlock":
             _append_flag = this["render" + node.type](node,varName,parent);
             break;
@@ -335,7 +335,7 @@ Compilation.prototype.renderWhen = function(node){
 }
 
 Compilation.prototype.renderMixin = function(node){//当前转换不可用
-    console.log('Mixin:',node);
+    //console.log('Mixin:',node);
     var _base = this.options.utils;
     if(node.call){
         this.block.write("this."+node.name+"(");
@@ -381,25 +381,13 @@ Compilation.prototype.renderMixin = function(node){//当前转换不可用
 }
 
 Compilation.prototype.renderMixinBlock = function(node){
-    console.log('MixinBlock:',node);
+    //console.log('MixinBlock:',node);
     this.block.writeLine("block.forEach(__add)");
 }
 
 Compilation.prototype.renderExtends = function(node,varName,parent){
     //console.log('Extends:',node);
-
-    //var relativePath = this.options.filePath.replace(process.cwd()+'\\','');
-    //var relative = relativePath.replace(/[-a-zA-Z0-9]+\.[-a-zA-Z0-9]+/,'');
-    //var file = relative + node.path +".jade";
-
-    //var aa =  new Compilation(fs.readFileSync(file)+"",file);
-
-    //var _out = this.options.output + relative + node.path + ".js";
-    //mkdirsSync(out_path);
-    //fs.writeFileSync(__dirname + '/test__.js', aa.compile());
-    //fs.writeFileSync(_out, aa.compile());
-
-    var _name = this.options.parseName(node.path);//getObjectName(node.path);
+    var _name = this.options.parseName(node.file.path);
 
     //new
     this.block.writeLine('var ' + varName + " = new "+ _name + "();");
@@ -415,7 +403,7 @@ Compilation.prototype.renderExtends = function(node,varName,parent){
     */
 }
 
-Compilation.prototype.renderInclude = function(node,varName,parent){
+Compilation.prototype.renderRawInclude = function(node,varName,parent){
     //console.log('Include:',node,'cwd:',process.cwd(),'path:',this.path);
     return this.renderExtends(node,varName,parent);
 }
