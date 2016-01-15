@@ -42,6 +42,7 @@ Main = function(options){
 	var fc_0_0 = new view.HelloWorld();
 	fc_0.append(fc_0_0.fragment);
 	frag.appendChild(fc_0);
+	this.fragment = frag;
 	return frag;
 };
 

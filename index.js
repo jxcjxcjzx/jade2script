@@ -18,28 +18,43 @@ exports.compile = function(str,options){
     if(!options.name){
         throw new Error('Please set name!');
     }
-    options.name = utils.parseName(options.name);
-    options.parseName = options.parseName || function(path){
-        path = path.replace('../','');
-        path = path.replace('./','');
-        var nameArr = options.name.split('.');
-        var prefix = nameArr.slice(0,nameArr.length-1).join('.');
-        prefix = prefix ? prefix + "." : "";
-        return  prefix + utils.parseName(path.replace(/\//g,'.'));
-    };
-    options = utils.merge(config,options);
-    return new Compilation(str,options).compile();
+    var _options = {};
+    _options.name = utils.parseName(options.name);
+    if(utils.isFunction(options.parseName)){
+        _options.parseName = function(_path){
+            return utils.parseName(options.parseName(_path));
+        }
+    }else{
+        _options.parseName = function(_path){
+            var nameArr = options.name.split('.');
+            var prefix = nameArr.slice(0,nameArr.length-1).join('.');
+            prefix = prefix ? prefix + "." : "";
+            return utils.parseName(prefix + _path.split(path.sep).join("."));
+        }
+    }
+    _options = utils.merge(config,_options);
+    _options = utils.merge(options,_options);
+    return new Compilation(str,_options).compile();
 };
 
 /**
  * compile from File
- * @param file
+ * @param _path
  * @param options
  * @returns {*}
  */
-exports.compileFile = function(file,options){
-    return module.exports.compile(fs.readFileSync(file)+"",utils.merge({
-        name:path.basename(file.relative,".jade").replace(/\\/g,'.')
+exports.compileFile = function(_path,options){
+    //var absPath =  _path;
+    var relPath = _path;
+    if(path.isAbsolute(_path)){
+        relPath = path.relative(process.cwd(), _path);
+    //}else{
+        //absPath = path.join(process.cwd(), _path);
+    }
+    //var fileName = path.basename(_path,".jade");
+
+    return module.exports.compile(fs.readFileSync(relPath)+"",utils.merge({
+        name:relPath.split(path.sep).join(".")   //file.relative.replace(".jade","").replace(/\//g,'.')
     },options));
 }
 
