@@ -24,6 +24,7 @@ function Compilation(doc,options){
 Compilation.prototype = Object.create(Block.prototype);
 
 Compilation.prototype.compile = function(){
+    var _name = this.options.name;
     this.deblock(this.tree);
     this.tree.forEach(function(node){
         if(node.type == "Tag" && node.name == "script") node.name = "main";
@@ -82,14 +83,17 @@ Compilation.prototype.compile = function(){
     //this.block.writeLine("}");
     //this.block.writeLine("});");
     //this.block.writeLine("");
-    var code = this.block.build();
-    var base = this.options.utils || "base";
-    var _name = this.options.name;
+
+
     var _translate = this.options.translate;
-    return base + '.routes("' + _name + '",true);\n'
-        + _name + " = " + (utils.isFunction(_translate) ? _translate(code,_name) : code + ";\n");
-    //console.log(code);
-    return code;
+    if(utils.isFunction(_translate)){
+        var code = this.block.build();
+        return  _translate(code,_name);
+    }else{
+        this.block.write(";");
+        return this.block.build();
+    }
+
 }
 
 Compilation.prototype.deblock = function(nodes){
@@ -122,7 +126,7 @@ Compilation.prototype.renderNode = function(node,varName,parent){ //Variable
             break;
     }
     if(!_append_flag){
-        this.block.writeLine( parent ? (parent + ".append("+ varName +");"):"frag.appendChild("+ varName +");");
+        this.block.writeLine( parent ? (parent + ".append("+ varName +");"):"frag.appendChild("+ varName +"[0]);");
     }
 }
 
@@ -230,7 +234,8 @@ Compilation.prototype.renderTag = function(node,varName,parent){
         var _key = this.renderAttributes(node);
         this.block.writeLine(");");
         if(isComponent){
-            this.block.writeLine(parent + ".append(" + varName +".fragment);");
+            //this.block.writeLine(parent + ".append(" + varName +".fragment);");
+            this.block.writeLine( parent == "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
         }
 
         if(_key){
@@ -387,11 +392,13 @@ Compilation.prototype.renderMixinBlock = function(node){
 
 Compilation.prototype.renderExtends = function(node,varName,parent){
     //console.log('Extends:',node);
-    var _name = this.options.parseName(node.file.path);
+    var _name = this.options.processModule(node,this.options.name);
 
     //new
     this.block.writeLine('var ' + varName + " = new "+ _name + "();");
-    this.block.writeLine( parent + '.append('+varName+'.fragment);');
+    //this.block.writeLine( parent + '.append('+varName+'.fragment);');
+    this.block.writeLine( parent == "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
+
     //this.extendBlock2.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
     //this.extendBlock2.writeLine( parent + '.append('+varName+'.fragment);');
 

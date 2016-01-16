@@ -88,10 +88,10 @@ exports.compile = function(options){
 };
 
 exports.translate = function(data,name){
-    return "vvp.CoreObject.extend({\n"
+    return name + " = vvp.CoreObject.extend({\n"
         +"\t init:function(options){\n"
         +"\t\t this.options = options || {};\n"
-        +"\t\t this.fragment = this._createView(options);\n"
+        +"\t\t this._createView(this.options);\n"
         +"\t},\n"
         +"\t _createView:"
         + data

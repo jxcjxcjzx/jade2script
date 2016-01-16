@@ -1,6 +1,6 @@
 {
   "name": "jade2script",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A jade to script compiler",
   "main": "index.js",
   "directories": {

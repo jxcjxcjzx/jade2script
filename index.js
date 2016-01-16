@@ -15,10 +15,46 @@ var fs = require("fs"),
  * @returns {*}
  */
 exports.compile = function(str,options){
+    var _options = initOptions(options);
+    return new Compilation(str,_options).compile();
+};
+
+function processModule(node,name){
+    var nameArr = name.split('.');
+    var prefix = nameArr.slice(0,nameArr.length-1).join('.');
+    prefix = prefix ? prefix + "." : "";
+    var _name = utils.parseName(prefix + node.file.path.split("/").join("."));
+    return _name;
+}
+
+function translate(data,name){
+    return name + " = " + data;
+}
+
+function initOptions(options){
     if(!options.name){
         throw new Error('Please set name!');
     }
+    var base = options.utils || "base";
+
     var _options = utils.merge(config,options);
+    return utils.merge(_options,{
+        //处理子模块
+        name:utils.parseName(options.name),
+        processModule:function(_path,name){
+            var _name = utils.isFunction(options.processModule)?options.processModule(_path,name):processModule(_path,name);
+            return utils.parseName(_name);
+        },
+        translate:function(data,name){
+            //创建命名空间
+            var _text = (_options.routes && name.indexOf('.') >= 0) ? base + '.routes("' + name + '",true);\n' :'';
+            _text += utils.isFunction(options.translate)?options.translate(data,name):translate(data,name);
+            return _text;
+        }
+    });
+
+
+    //options
     _options.name = utils.parseName(options.name);
     if(utils.isFunction(options.parseName)){
         var _parseName = options.parseName;
@@ -33,8 +69,8 @@ exports.compile = function(str,options){
             return utils.parseName(prefix + _path.split("/").join("."));
         }
     }
-    return new Compilation(str,_options).compile();
-};
+    return _options;
+}
 
 /**
  * compile from File
