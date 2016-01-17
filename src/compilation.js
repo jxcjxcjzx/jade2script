@@ -31,6 +31,7 @@ Compilation.prototype.compile = function(){
     });
 
     this.block.writeLine("function(options){",1);
+    this.block.writeLine("this.eles = [];");
     this.block.writeLine("var frag = document.createDocumentFragment();");
     this.renderNodes(this.tree);
 
@@ -231,11 +232,12 @@ Compilation.prototype.renderTag = function(node,varName,parent){
             }
             node.nodes = [];
         }
+
         var _key = this.renderAttributes(node);
         this.block.writeLine(");");
         if(isComponent){
             //this.block.writeLine(parent + ".append(" + varName +".fragment);");
-            this.block.writeLine( parent == "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
+            this.block.writeLine( parent != "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
         }
 
         if(_key){
@@ -271,10 +273,10 @@ Compilation.prototype.renderAttributes = function(node,varName,parent){
             }
         }
 
-        if(attributes.class){
-            attributes.className = attributes.class;
-            delete attributes.class;
-        }
+        //if(attributes.class){
+        //    attributes.className = attributes.class;
+        //    delete attributes.class;
+        //}
         var _base  = this.options.utils;
         if(node.attributeBlocks.length) this.block.write(_base + ".mixinAttributes(");
         var first = true;
@@ -397,8 +399,10 @@ Compilation.prototype.renderExtends = function(node,varName,parent){
     //new
     this.block.writeLine('var ' + varName + " = new "+ _name + "();");
     //this.block.writeLine( parent + '.append('+varName+'.fragment);');
-    this.block.writeLine( parent == "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
-
+    this.block.writeLine( parent != "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
+    var _nameArr = _name.split(".");
+    var _key = _nameArr[_nameArr.length - 1].toLowerCase();
+    this.block.writeLine("this.eles['" + _key + "'] = " + varName +';');
     //this.extendBlock2.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
     //this.extendBlock2.writeLine( parent + '.append('+varName+'.fragment);');
 
