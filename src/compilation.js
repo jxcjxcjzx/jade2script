@@ -260,13 +260,14 @@ Compilation.prototype.renderBlock = function(node){
 
 Compilation.prototype.renderAttributes = function(node,varName,parent){
     var _key_;
+    var _op_key = this.options.key || "";
     if(node.attrs){
         var attributes = {};
         for(var i = 0; i < node.attrs.length; i++){
             var att = node.attrs[i];
             if(attributes[att.name] && att.name == "class") {
                 attributes[att.name] += " + \" \" + " + att.val;
-            }else if(att.name == "id"){
+            }else if(att.name == _op_key){
                 _key_ = att.val;
             }else{
                 attributes[att.name] = att.val;
@@ -394,15 +395,17 @@ Compilation.prototype.renderMixinBlock = function(node){
 
 Compilation.prototype.renderExtends = function(node,varName,parent){
     //console.log('Extends:',node);
-    var _name = this.options.processModule(node,this.options.name);
+    var _m_str = this.options.processModule(node,varName);
 
     //new
-    this.block.writeLine('var ' + varName + " = new "+ _name + "();");
+    //this.block.writeLine('var ' + varName + " = new "+ _name + "();");
+    this.block.writeLine(_m_str);
+
     //this.block.writeLine( parent + '.append('+varName+'.fragment);');
     this.block.writeLine( parent != "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
-    var _nameArr = _name.split(".");
-    var _key = _nameArr[_nameArr.length - 1].toLowerCase();
-    this.block.writeLine("this.eles['" + _key + "'] = " + varName +';');
+    //var _nameArr = _name.split(".");
+    //var _key = _nameArr[_nameArr.length - 1].toLowerCase();
+    //this.block.writeLine("this.eles['" + _key + "'] = " + varName +';');
     //this.extendBlock2.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
     //this.extendBlock2.writeLine( parent + '.append('+varName+'.fragment);');
 

@@ -19,11 +19,12 @@ exports.compile = function(str,options){
     return new Compilation(str,_options).compile();
 };
 
-function processModule(node,name){
+function processModule(node,varName,name){
     var nameArr = name.split('.');
     var prefix = nameArr.slice(0,nameArr.length-1).join('.');
     prefix = prefix ? prefix + "." : "";
     var _name = utils.parseName(prefix + node.file.path.split("/").join("."));
+    return 'var ' + varName + " = new "+ _name + "();"
     return _name;
 }
 
@@ -38,15 +39,14 @@ function initOptions(options){
     var base = options.utils || "base";
 
     var _options = utils.merge(config,options);
+    var _name = utils.parseName(options.name);
     return utils.merge(_options,{
-        //处理子模块
-        name:utils.parseName(options.name),
-        processModule:function(_path,name){
-            var _name = utils.isFunction(options.processModule)?options.processModule(_path,name):processModule(_path,name);
-            return utils.parseName(_name);
+        name:_name,
+        processModule:function(_path,varName){
+            var _str = utils.isFunction(options.processModule)?options.processModule(_path,varName):processModule(_path,varName,_name);
+            return _str;
         },
         translate:function(data,name){
-            //创建命名空间
             var _text = (_options.routes && name.indexOf('.') >= 0) ? base + '.routes("' + name + '",true);\n' :'';
             _text += utils.isFunction(options.translate)?options.translate(data,name):translate(data,name);
             return _text;
@@ -93,6 +93,7 @@ exports.compileFile = function(_path,options){
     },options));
 }
 
+exports.parseName = utils.parseName;
 //require.extensions[".jade"] = function(m,file){
 //    m._compile(module.exports.compileFile(file),file);
 //}
