@@ -19,13 +19,14 @@ exports.compile = function(str,options){
     return new Compilation(str,_options).compile();
 };
 
-function processModule(node,varName,name){
+function processModule(node,varName,parent,name){
     var nameArr = name.split('.');
     var prefix = nameArr.slice(0,nameArr.length-1).join('.');
     prefix = prefix ? prefix + "." : "";
     var _name = utils.parseName(prefix + node.file.path.split("/").join("."));
-    return 'var ' + varName + " = new "+ _name + "();"
-    return _name;
+    var ret = 'var ' + varName + " = new "+ _name + "();";
+    ret += parent != "frag" ? (parent + ".append(" + varName + ".fragment);") : "frag.appendChild(" + varName + ".fragment);";
+    return ret;
 }
 
 function translate(data,name){
@@ -42,8 +43,8 @@ function initOptions(options){
     var _name = utils.parseName(options.name);
     return utils.merge(_options,{
         name:_name,
-        processModule:function(_path,varName){
-            var _str = utils.isFunction(options.processModule)?options.processModule(_path,varName):processModule(_path,varName,_name);
+        processModule:function(_path,varName,parent){
+            var _str = utils.isFunction(options.processModule)?options.processModule(_path,varName,parent):processModule(_path,varName,parent,_name);
             return _str;
         },
         translate:function(data,name){

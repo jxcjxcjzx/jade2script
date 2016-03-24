@@ -31,7 +31,7 @@ Compilation.prototype.compile = function(){
     });
 
     this.block.writeLine("function(options){",1);
-    this.block.writeLine("this.eles = [];");
+    //this.block.writeLine("this.eles = [];");
     this.block.writeLine("var frag = document.createDocumentFragment();");
     this.renderNodes(this.tree);
 
@@ -107,7 +107,6 @@ Compilation.prototype.deblock = function(nodes){
 
 Compilation.prototype.renderNode = function(node,varName,parent){ //Variable
     var _append_flag = false;
-    //console.log(arguments);
     switch(node.type){
         case "Text":
         case "Code":
@@ -115,6 +114,7 @@ Compilation.prototype.renderNode = function(node,varName,parent){ //Variable
         case "Block":
         case "Each":
         case "Comment":
+        case "Conditional":
         case "BlockComment":
         case "Case":
         case "When":
@@ -159,11 +159,12 @@ Compilation.prototype.renderCode = function(node,varName,parent){
     if(!node.val) return;
     if(node.block){
         this.block.writeLine(node.val+"{",1);
-        this.renderNodes(node.block.nodes);
+        this.renderNodes(node.block.nodes,parent);
         this.block.indent(-1);
         this.block.writeLine("}");
     }else if(node.buffer){
-        this.block.writeLine( parent  +".html(\'"+node.val+"\');");
+        this.block.writeLine( parent  +".html("+node.val+");");
+        //this.block.writeLine( parent  +".html(\'"+node.val+"\');");
         //this.block.writeLine("__add("+node.val+");");
     }else{
         this.block.writeLine(node.val);
@@ -171,8 +172,22 @@ Compilation.prototype.renderCode = function(node,varName,parent){
     return true;
 }
 
+Compilation.prototype.renderConditional = function(node,varName,parent){
+  //console.log('Conditional:',node);
+  if(!node.test) return;
+  this.block.writeLine("if("+node.test+"){",1);
+  this.renderNode(node.consequent,varName,parent);
+  if(node.alternate){
+    this.block.indent(-1);
+    this.block.writeLine("} else {",1);
+    this.renderNode(node.alternate,varName,parent);
+  }
+  this.block.indent(-1);
+  this.block.writeLine("}");
+  return true;
+}
+
 Compilation.prototype.renderTag = function(node,varName,parent){
-    //console.log('Tag:',node);
     if(node.name=="main"){
         //console.log('main',node.nodes);
         for(var i = 0; i < node.nodes.length; i++){
@@ -244,18 +259,18 @@ Compilation.prototype.renderTag = function(node,varName,parent){
             this.block.writeLine("this[" + _key +"] = " + varName +";");
         }
 
-        if(node.nodes.length){
+        if(node.nodes && node.nodes.length){
             this.renderNodes(node.nodes,_varName);
         }else{
             //this.block.writeLine(");");
         }
-
         return !isDOM;
     }
 };
 
-Compilation.prototype.renderBlock = function(node){
-    this.renderNodes(node.nodes);
+Compilation.prototype.renderBlock = function(node,varName,parent){
+    this.renderNodes(node.nodes,parent);
+    return true;
 };
 
 Compilation.prototype.renderAttributes = function(node,varName,parent){
@@ -295,12 +310,13 @@ Compilation.prototype.renderAttributes = function(node,varName,parent){
     return _key_;
 }
 //each
-Compilation.prototype.renderEach = function(node){
+Compilation.prototype.renderEach = function(node,varName,parent){
     this.block.writeLine("for(var "+(node.key||"__key")+" in "+node.obj+"){",1);
     if(node.val){
         this.block.writeLine("var "+node.val+" = "+node.obj+"["+(node.key||"__key")+"];");
     }
-    this.renderNodes(node.nodes);
+    //console.log(JSON.stringify(node.nodes));
+    this.renderNodes(node.nodes,parent);
     this.block.indent(-1);
     this.block.writeLine("}");
     return true;
@@ -323,26 +339,26 @@ Compilation.prototype.renderBlockComment = function(node){
     return true;
 }
 
-Compilation.prototype.renderCase = function(node){
+Compilation.prototype.renderCase = function(node,varName,parent){
     this.block.writeLine("switch("+node.expr+"){",1);
-    this.renderNodes(node.nodes);
+    this.renderNodes(node.nodes,parent);
     this.block.indent(-1);
     this.block.writeLine("}");
     return true;
 }
 
-Compilation.prototype.renderWhen = function(node){
+Compilation.prototype.renderWhen = function(node,varName,parent){
     //console.log('When:',node);
     this.block.writeLine("case "+node.expr+":",1);
     if(node.nodes){
-        this.renderNodes(node.nodes);
+        this.renderNodes(node.nodes,parent);
         this.block.writeLine("break;");
     }
     this.block.indent(-1);
     return true;
 }
 
-Compilation.prototype.renderMixin = function(node){//当前转换不可用
+Compilation.prototype.renderMixin = function(node,varName,parent){//当前转换不可用
     //console.log('Mixin:',node);
     var _base = this.options.utils;
     if(node.call){
@@ -350,7 +366,7 @@ Compilation.prototype.renderMixin = function(node){//当前转换不可用
         if(node.nodes){
             this.block.writeLine(_base +".render(this,function(__add){",1);
             //this.block.writeLine("jade2react.render(this,function(__add){",1);
-            this.renderNodes(node.nodes);
+            this.renderNodes(node.nodes,parent);
             this.block.indent(-1);
             this.block.write("}),");
         }else{
@@ -379,7 +395,7 @@ Compilation.prototype.renderMixin = function(node){//当前转换不可用
             this.block.writeLine("var "+argparts[1].trim()+" = Array.prototype.slice.call(arguments,"+argparts[0].split(",").length+");");
         }
         this.block.writeLine("return "+ _base +".render(this,function(__add){",1);
-        this.renderNodes(node.nodes)
+        this.renderNodes(node.nodes,parent);
         this.block.indent(-1);
         this.block.writeLine("});");
         this.block.indent(-1);
@@ -395,26 +411,13 @@ Compilation.prototype.renderMixinBlock = function(node){
 
 Compilation.prototype.renderExtends = function(node,varName,parent){
     //console.log('Extends:',node);
-    var _m_str = this.options.processModule(node,varName);
-
-    //new
-    //this.block.writeLine('var ' + varName + " = new "+ _name + "();");
-    this.block.writeLine(_m_str);
-
-    //this.block.writeLine( parent + '.append('+varName+'.fragment);');
-    this.block.writeLine( parent != "frag" ? (parent + ".append("+ varName +".fragment);"):"frag.appendChild("+ varName +".fragment);");
-    //var _nameArr = _name.split(".");
-    //var _key = _nameArr[_nameArr.length - 1].toLowerCase();
-    //this.block.writeLine("this.eles['" + _key + "'] = " + varName +';');
-    //this.extendBlock2.writeLine('var ' + varName + ' = new '+ opt.prefix +'.'+_name+"();");
-    //this.extendBlock2.writeLine( parent + '.append('+varName+'.fragment);');
-
+    var _m_str = this.options.processModule(node,varName,parent);
+    this.block.writeLine(_m_str || '');
+    //if(_m_str) {
+    //    this.block.writeLine(_m_str);
+    //    this.block.writeLine(parent != "frag" ? (parent + ".append(" + varName + ".fragment);") : "frag.appendChild(" + varName + ".fragment);");
+    //}
     return true;
-    /*
-    var baseComponent = (node?("require(\""+node.path+"\")"):"React.Component");
-    this.extendBlock1.writeLine(baseComponent+".call(this);");
-    this.extendBlock2.writeLine("Component.prototype = Object.create("+baseComponent+".prototype);");
-    */
 }
 
 Compilation.prototype.renderRawInclude = function(node,varName,parent){
