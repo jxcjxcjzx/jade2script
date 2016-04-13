@@ -262,7 +262,11 @@ Compilation.prototype.renderTag = function(node,varName,parent){
         if(node.nodes && node.nodes.length){
             this.renderNodes(node.nodes,_varName);
         }else{
-            //this.block.writeLine(");");
+          //this.block.writeLine(");");
+
+          if(node.block){
+            this.renderBlock(node.block,varName,varName);
+          }
         }
         return !isDOM;
     }
